@@ -1,12 +1,12 @@
 use libadwaita::{
-    ActionRow, Application, ApplicationWindow as AdwApplicationWindow, HeaderBar,
-    gtk::{Box, ListBox, Orientation, SelectionMode},
-    prelude::{ActionRowExt, BoxExt, WidgetExt},
+    ActionRow, HeaderBar,
+    gtk::{Box, ListBox, Orientation, SelectionMode, prelude::GtkWindowExt},
+    prelude::{ActionRowExt, BoxExt},
 };
 
 #[allow(dead_code)]
 pub struct ApplicationWindow {
-    pub window: AdwApplicationWindow,
+    pub window: libadwaita::ApplicationWindow,
     pub title: String,
     pub header: HeaderBar,
     pub row: ActionRow,
@@ -14,7 +14,8 @@ pub struct ApplicationWindow {
 }
 impl ApplicationWindow {
     fn build_header() -> HeaderBar {
-        return HeaderBar::new();
+        let header = HeaderBar::new();
+        return header;
     }
 
     fn build_list() -> ListBox {
@@ -36,18 +37,15 @@ impl ApplicationWindow {
             .build();
     }
 
-    pub fn connect_to_row_click(&self, row: &ActionRow, callback: fn()) {
-        row.connect_activated(move |_| {
-            callback();
-            eprintln!("Clicked!");
-        });
+    pub fn connect_to_row_click(&self, callback: fn(&ActionRow)) {
+        self.row.connect_activated(callback);
     }
 
     pub fn show(&self) {
-        self.window.show();
+        self.window.present();
     }
 
-    pub fn new(application: &Application, title: &str) -> Self {
+    pub fn new(application: &libadwaita::Application, title: &str) -> Self {
         let title = title.to_string();
         let header = Self::build_header();
         let list = Self::build_list();
@@ -59,7 +57,7 @@ impl ApplicationWindow {
         content.append(&header);
         content.append(&list);
 
-        let window = AdwApplicationWindow::builder()
+        let window = libadwaita::ApplicationWindow::builder()
             .application(application)
             .title(&title)
             .default_height(600)
