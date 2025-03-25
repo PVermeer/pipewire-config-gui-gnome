@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 tokio = { version = "1.44.1", features = ["full"] }
 ashpd = "0.11.0"
-libadwaita = "0.7.2"
+libadwaita = { version = "0.7.2", features = ["v1_4"] }
