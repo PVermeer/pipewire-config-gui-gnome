@@ -1,11 +1,13 @@
 use libadwaita::{
-    AboutWindow, HeaderBar, NavigationPage, NavigationSplitView, ToolbarView,
+    AboutWindow, Breakpoint, BreakpointCondition, HeaderBar, NavigationPage, NavigationSplitView,
+    ToolbarView,
     gio::{ActionEntry, Menu, MenuItem, SimpleActionGroup, prelude::ActionMapExtManual},
-    glib::object::IsA,
+    glib::{Value, object::IsA},
     gtk::{
-        self, ListBox, MenuButton, Orientation, SelectionMode,
+        self, ListBox, MenuButton, Orientation,
         prelude::{GtkWindowExt, WidgetExt},
     },
+    prelude::AdwApplicationWindowExt,
 };
 
 use crate::config;
@@ -38,7 +40,7 @@ impl ApplicationWindow {
             actions: main_menu_actions,
         };
 
-        let (sidebar, sidebar_header) = Self::build_view(&title, &list);
+        let (sidebar, sidebar_header) = Self::build_view("Settings", &list);
         let (content, _content_header) = Self::build_view("Content", &content_box);
         sidebar_header.pack_end(&main_menu.button);
 
@@ -55,6 +57,10 @@ impl ApplicationWindow {
             .content(&split_view)
             .build();
         window.insert_action_group(Self::MAIN_MENU_ACTION_LABEL, Some(&main_menu.actions));
+
+        let breakpoint = Self::build_breakpoint();
+        breakpoint.add_setter(&split_view, "collapsed", Some(&Value::from(true)));
+        window.add_breakpoint(breakpoint);
 
         let application_window = Self {
             window,
@@ -95,15 +101,20 @@ impl ApplicationWindow {
         return (page, header);
     }
 
+    fn build_breakpoint() -> Breakpoint {
+        let breakpoint_condition = BreakpointCondition::new_length(
+            libadwaita::BreakpointConditionLengthType::MaxWidth,
+            600_f64,
+            libadwaita::LengthUnit::Sp,
+        );
+        let breakpoint = Breakpoint::new(breakpoint_condition);
+
+        return breakpoint;
+    }
+
     fn build_list() -> ListBox {
         return ListBox::builder()
-            .margin_top(32)
-            .margin_end(32)
-            .margin_bottom(32)
-            .margin_start(32)
-            .selection_mode(SelectionMode::None)
-            // makes the list look nicer
-            .css_classes(vec![String::from("boxed-list")])
+            .css_classes(["navigation-sidebar"])
             .build();
     }
 

@@ -10,7 +10,7 @@ fn main() {
         .build();
 
     adw_application.connect_activate(|adw_application| {
-        let application = Application::new(adw_application.clone());
+        let application = Application::new(adw_application);
         application.run_app();
     });
 
