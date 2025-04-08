@@ -5,7 +5,7 @@ use application::Application;
 use libadwaita::gio::prelude::{ApplicationExt, ApplicationExtManual};
 
 fn main() {
-    let adw_application: libadwaita::Application = libadwaita::Application::builder()
+    let adw_application = libadwaita::Application::builder()
         .application_id(config::APP_ID)
         .build();
 
