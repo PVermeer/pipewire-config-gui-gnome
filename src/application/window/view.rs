@@ -1,24 +1,16 @@
-mod main_page;
-mod sidebar_page;
-
-use std::collections::HashMap;
+pub mod pages;
 
 use libadwaita::{
-    ActionRow, Breakpoint, BreakpointCondition, HeaderBar, NavigationPage, NavigationSplitView,
-    ToolbarView,
+    ActionRow, Breakpoint, BreakpointCondition, NavigationSplitView,
     gio::{ActionEntry, SimpleActionGroup, prelude::ActionMapExtManual},
-    glib::{Value, Variant, VariantTy, object::IsA},
-    gtk::{self, ListBox},
+    glib::{Value, Variant, VariantTy},
+    gtk::ListBox,
 };
-use main_page::MainPage;
-use sidebar_page::SidebarPage;
-
-type Pages = HashMap<String, (NavigationPage, HeaderBar)>;
+use pages::{Page, PageVariant, Pages};
 
 pub struct View {
     pub pages: Pages,
     pub split_view: NavigationSplitView,
-    pub sidebar: SidebarPage,
     pub breakpoint: Breakpoint,
     pub actions: SimpleActionGroup,
 }
@@ -26,53 +18,53 @@ impl View {
     pub const VIEW_ACTION_LABEL: &str = "view";
 
     pub fn new() -> Self {
-        let mut pages: Pages = HashMap::new();
+        let pages = PageVariant::build_hash_map();
+        let sidebar = pages.get(&Page::Sidebar).unwrap();
+        let sidebar_page = sidebar.get_nav_page();
+        let sidebar_nav_list = sidebar.get_list().unwrap();
         let actions = SimpleActionGroup::new();
-        let sidebar = SidebarPage::new();
         let split_view = NavigationSplitView::builder()
-            .sidebar(&sidebar.page)
+            .sidebar(sidebar_page)
             .show_content(true)
             .build();
         let breakpoint = Self::build_breakpoint();
-        breakpoint.add_setter(&split_view, "collapsed", Some(&Value::from(true)));
-
-        let main_page = MainPage::new();
-
-        pages.insert(
-            MainPage::LABEL.to_owned(),
-            (main_page.page, main_page.header),
-        );
-
         let build_action = Self::build_navigate_action(&split_view, &pages);
-        actions.add_action_entries([build_action]);
 
-        Self::add_nav_row(&sidebar.list, "Main page", "main-page");
+        breakpoint.add_setter(&split_view, "collapsed", Some(&Value::from(true)));
+        actions.add_action_entries([build_action]);
+        Self::add_nav_row(sidebar_nav_list, "Main page", Page::Main);
 
         return Self {
             pages,
             split_view,
-            sidebar,
             breakpoint,
             actions,
         };
     }
 
-    pub fn navigate(&self, page_label: &str) {
-        let (page, _) = self.pages.get(page_label).unwrap();
+    pub fn navigate(&self, page: Page) {
+        let page = self.pages.get(&page).unwrap().get_nav_page();
         self.split_view.set_content(Some(page));
     }
 
+    // TODO - pages should not be cloned, it should live for the app duration
+    // After figuring this out also remove clone derive on involved types
     fn build_navigate_action(
         split_view: &NavigationSplitView,
         pages: &Pages,
     ) -> ActionEntry<SimpleActionGroup> {
         let split_view_clone = split_view.clone();
         let pages_clone = pages.clone();
+
         let action = ActionEntry::builder("navigate")
-            .parameter_type(Some(VariantTy::STRING))
-            .activate(move |_: &SimpleActionGroup, _, parameter| {
-                let page_label = parameter.unwrap().try_get::<String>().unwrap();
-                let (page, _) = pages_clone.get(&page_label).unwrap();
+            .parameter_type(Some(VariantTy::INT32))
+            .activate(move |_, _, parameter| {
+                // Using an int as parameter to map back to the enum
+                let enum_page_index = parameter.unwrap().try_get::<i32>().unwrap();
+                let page_enum: Page = unsafe { ::std::mem::transmute(enum_page_index) };
+
+                let page = pages_clone.get(&page_enum).unwrap().get_nav_page();
+                // FIXME - parent error on settings this
                 split_view_clone.set_content(Some(page));
             })
             .build();
@@ -91,8 +83,8 @@ impl View {
         return breakpoint;
     }
 
-    fn add_nav_row(sidebar_list: &ListBox, title: &str, action_name: &str) -> ActionRow {
-        let action_target = Variant::from(action_name);
+    fn add_nav_row(sidebar_list: &ListBox, title: &str, page: Page) -> ActionRow {
+        let action_target = Variant::from(page as i32);
 
         let row = ActionRow::builder()
             .activatable(true)
@@ -103,26 +95,5 @@ impl View {
 
         sidebar_list.append(&row);
         return row;
-    }
-}
-
-trait NavPage {
-    const LABEL: &str;
-
-    fn new() -> Self;
-
-    fn build_nav_page(title: &str, content: &impl IsA<gtk::Widget>) -> (NavigationPage, HeaderBar) {
-        let header = HeaderBar::new();
-        let toolbar = ToolbarView::new();
-        toolbar.add_top_bar(&header);
-        toolbar.set_content(Some(content));
-
-        let page = NavigationPage::builder()
-            .title(title)
-            .tag(title)
-            .child(&toolbar)
-            .build();
-
-        return (page, header);
     }
 }

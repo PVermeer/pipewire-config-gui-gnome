@@ -11,7 +11,7 @@ use libadwaita::{
     },
     prelude::AdwApplicationWindowExt,
 };
-use view::View;
+use view::{pages::Page, View};
 
 pub struct ApplicationWindow {
     pub window: libadwaita::ApplicationWindow,
@@ -35,8 +35,9 @@ impl ApplicationWindow {
         window.insert_action_group(View::VIEW_ACTION_LABEL, Some(&view.actions));
         window.add_breakpoint(view.breakpoint.clone());
 
-        view.sidebar.header.pack_end(&app_menu.button);
-        view.navigate("main-page");
+        let sidebar_header = view.pages.get(&Page::Sidebar).unwrap().get_header();
+        sidebar_header.pack_end(&app_menu.button);
+        view.navigate(Page::Main);
 
         return Self {
             window,

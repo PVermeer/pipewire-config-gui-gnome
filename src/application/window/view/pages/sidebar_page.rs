@@ -5,6 +5,7 @@ use libadwaita::{
 
 use super::NavPage;
 
+#[derive(Clone)]
 pub struct SidebarPage {
     pub page: NavigationPage,
     pub header: HeaderBar,
@@ -32,3 +33,4 @@ impl NavPage for SidebarPage {
         return Self { page, header, list };
     }
 }
+
