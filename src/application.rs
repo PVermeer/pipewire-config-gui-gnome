@@ -11,10 +11,10 @@ pub struct Application {
 
 impl Application {
     pub fn new(adw_application: &libadwaita::Application) -> Self {
-        let window = ApplicationWindow::new(&adw_application, config::APP_NAME);
+        let window = ApplicationWindow::new(adw_application, config::APP_NAME);
 
         return Self {
-            adw_application: adw_application.clone(),
+            adw_application: adw_application.to_owned(),
             window,
         };
     }

@@ -1,7 +1,7 @@
 pub mod main_page;
 mod sidebar_page;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use libadwaita::{
     HeaderBar, NavigationPage, ToolbarView,
@@ -11,26 +11,25 @@ use libadwaita::{
 use main_page::MainPage;
 use sidebar_page::SidebarPage;
 
-pub type Pages = HashMap<Page, PageVariant>;
+pub type Pages = Rc<HashMap<Page, PageVariant>>;
 
 #[repr(i32)]
-#[derive(Eq, Hash, PartialEq, Clone)]
+#[derive(Eq, Hash, PartialEq)]
 pub enum Page {
     Sidebar,
     Main,
 }
 
-#[derive(Clone)]
 pub enum PageVariant {
     Sidebar(SidebarPage),
     Main(MainPage),
 }
 impl PageVariant {
     pub fn build_hash_map() -> Pages {
-        HashMap::from([
+        Rc::new(HashMap::from([
             (Page::Sidebar, PageVariant::Sidebar(SidebarPage::new())),
             (Page::Main, PageVariant::Main(MainPage::new())),
-        ])
+        ]))
     }
 
     pub fn get_nav_page(&self) -> &NavigationPage {
@@ -56,7 +55,7 @@ impl PageVariant {
     }
 }
 
-pub trait NavPage: Clone {
+pub trait NavPage {
     const LABEL: &str;
 
     fn new() -> Self;

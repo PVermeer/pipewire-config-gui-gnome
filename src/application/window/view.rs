@@ -22,11 +22,11 @@ impl View {
         let sidebar = pages.get(&Page::Sidebar).unwrap();
         let sidebar_page = sidebar.get_nav_page();
         let sidebar_nav_list = sidebar.get_list().unwrap();
-        let actions = SimpleActionGroup::new();
         let split_view = NavigationSplitView::builder()
             .sidebar(sidebar_page)
             .show_content(true)
             .build();
+        let actions = SimpleActionGroup::new();
         let breakpoint = Self::build_breakpoint();
         let build_action = Self::build_navigate_action(&split_view, &pages);
 
@@ -47,8 +47,6 @@ impl View {
         self.split_view.set_content(Some(page));
     }
 
-    // TODO - pages should not be cloned, it should live for the app duration
-    // After figuring this out also remove clone derive on involved types
     fn build_navigate_action(
         split_view: &NavigationSplitView,
         pages: &Pages,
@@ -94,6 +92,7 @@ impl View {
             .build();
 
         sidebar_list.append(&row);
+
         return row;
     }
 }
