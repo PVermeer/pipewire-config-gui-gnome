@@ -11,12 +11,10 @@ use libadwaita::{
     },
     prelude::AdwApplicationWindowExt,
 };
-use view::{pages::Page, View};
+use view::{View, pages::Page};
 
 pub struct ApplicationWindow {
     pub window: libadwaita::ApplicationWindow,
-    pub app_menu: AppMenu,
-    pub view: View,
 }
 impl ApplicationWindow {
     pub fn new(adw_application: &libadwaita::Application, title: &str) -> Self {
@@ -31,19 +29,14 @@ impl ApplicationWindow {
             .content(&view.split_view)
             .build();
 
-        window.insert_action_group(AppMenu::MAIN_MENU_ACTION_LABEL, Some(&app_menu.actions));
-        window.insert_action_group(View::VIEW_ACTION_LABEL, Some(&view.actions));
+        window.insert_action_group(AppMenu::ACTION_LABEL, Some(&app_menu.actions));
+        window.insert_action_group(View::ACTION_LABEL, Some(&view.actions));
         window.add_breakpoint(view.breakpoint.clone());
 
-        let sidebar_header = view.pages.get(&Page::Sidebar).unwrap().get_header();
-        sidebar_header.pack_end(&app_menu.button);
+        view.sidebar.header.pack_end(&app_menu.button);
         view.navigate(Page::Main);
 
-        return Self {
-            window,
-            app_menu,
-            view,
-        };
+        return Self { window };
     }
 
     pub fn show(&self) {

@@ -1,5 +1,5 @@
 use libadwaita::{
-    HeaderBar, NavigationPage,
+    NavigationPage,
     gtk::{self, Label, Orientation, prelude::BoxExt},
 };
 
@@ -7,7 +7,6 @@ use super::NavPage;
 
 pub struct MainPage {
     pub page: NavigationPage,
-    pub header: HeaderBar,
 }
 impl NavPage for MainPage {
     const LABEL: &str = "main-page";
@@ -33,8 +32,8 @@ impl NavPage for MainPage {
             .build();
 
         content_box.append(&label);
-        let (page, header) = Self::build_nav_page("Content", &content_box);
+        let (page, _header) = Self::build_nav_page("Content", &content_box);
 
-        return Self { page, header };
+        return Self { page };
     }
 }

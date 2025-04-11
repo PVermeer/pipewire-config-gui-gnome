@@ -1,14 +1,17 @@
 use libadwaita::{
-    HeaderBar, NavigationPage, ToolbarView,
+    ActionRow, HeaderBar, NavigationPage, ToolbarView,
+    glib::Variant,
     gtk::{ListBox, SelectionMode},
 };
 
-use super::NavPage;
+use crate::application::window::view::View;
+
+use super::{NavPage, Page};
 
 pub struct SidebarPage {
     pub page: NavigationPage,
     pub header: HeaderBar,
-    pub list: ListBox,
+    list: ListBox,
 }
 impl NavPage for SidebarPage {
     const LABEL: &str = "sidebar-page";
@@ -32,4 +35,19 @@ impl NavPage for SidebarPage {
         return Self { page, header, list };
     }
 }
+impl SidebarPage {
+    pub fn add_nav_row(&self, title: &str, page: Page) -> ActionRow {
+        let action_target = Variant::from(page as i32);
 
+        let row = ActionRow::builder()
+            .activatable(true)
+            .action_name(View::VIEW_NAVIGATE_ACTION_LABEL)
+            .action_target(&action_target)
+            .title(title)
+            .build();
+
+        self.list.append(&row);
+
+        return row;
+    }
+}

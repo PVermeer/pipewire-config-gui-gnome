@@ -6,16 +6,18 @@ use libadwaita::{
 use super::ApplicationWindow;
 
 pub struct AppMenu {
-    pub menu: Menu,
     pub button: MenuButton,
     pub actions: SimpleActionGroup,
 }
 impl AppMenu {
+    pub const NAME: &str = "app-menu";
+    pub const ACTION_LABEL: &str = "app-menu";
+
     pub fn new() -> Self {
         // GTK does not let a popovermenu to be created programmatically
         // https://blog.libove.org/posts/rust-gtk--creating-a-menu-bar-programmatically-with-gtk-rs
         let button = MenuButton::builder()
-            .name("main-menu")
+            .name(AppMenu::NAME)
             .icon_name("open-menu-symbolic")
             .build();
         let menu = Menu::new();
@@ -25,13 +27,8 @@ impl AppMenu {
 
         Self::add_about(&menu, &actions);
 
-        return Self {
-            menu,
-            button,
-            actions,
-        };
+        return Self { button, actions };
     }
-    pub const MAIN_MENU_ACTION_LABEL: &str = "app-menu";
 
     fn add_about(menu: &Menu, actions: &SimpleActionGroup) {
         let item =
@@ -46,7 +43,7 @@ impl AppMenu {
     ) -> MenuItem {
         let item = MenuItem::new(
             Some(label),
-            Some(&(Self::MAIN_MENU_ACTION_LABEL.to_owned() + "." + action_name)),
+            Some(&(Self::ACTION_LABEL.to_owned() + "." + action_name)),
         );
         let action = ActionEntry::builder(action_name)
             .activate(move |_: &SimpleActionGroup, _, _| {

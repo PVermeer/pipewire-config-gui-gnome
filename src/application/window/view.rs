@@ -1,41 +1,43 @@
 pub mod pages;
 
 use libadwaita::{
-    ActionRow, Breakpoint, BreakpointCondition, NavigationSplitView,
-    gio::{ActionEntry, SimpleActionGroup, prelude::ActionMapExtManual},
+    Breakpoint, BreakpointCondition, NavigationSplitView,
+    gio::{
+        ActionEntry, SimpleActionGroup,
+        prelude::{ActionGroupExt, ActionMapExtManual},
+    },
     glib::{Value, Variant, VariantTy},
-    gtk::ListBox,
+    gtk::prelude::WidgetExt,
 };
-use pages::{Page, PageVariant, Pages};
+use pages::{NavPage, Page, PageVariant, sidebar_page::SidebarPage};
 
 pub struct View {
-    pub pages: Pages,
+    pub sidebar: SidebarPage,
     pub split_view: NavigationSplitView,
     pub breakpoint: Breakpoint,
     pub actions: SimpleActionGroup,
 }
 impl View {
-    pub const VIEW_ACTION_LABEL: &str = "view";
+    pub const ACTION_LABEL: &str = "view";
+    const NAVIGATE_ACTION_LABEL: &str = "navigate";
+    const VIEW_NAVIGATE_ACTION_LABEL: &str = "view.navigate";
 
     pub fn new() -> Self {
-        let pages = PageVariant::build_hash_map();
-        let sidebar = pages.get(&Page::Sidebar).unwrap();
-        let sidebar_page = sidebar.get_nav_page();
-        let sidebar_nav_list = sidebar.get_list().unwrap();
+        let sidebar = SidebarPage::new();
         let split_view = NavigationSplitView::builder()
-            .sidebar(sidebar_page)
+            .sidebar(&sidebar.page)
             .show_content(true)
             .build();
         let actions = SimpleActionGroup::new();
         let breakpoint = Self::build_breakpoint();
-        let build_action = Self::build_navigate_action(&split_view, &pages);
+        let navigation_action = Self::build_navigate_action(&split_view);
 
         breakpoint.add_setter(&split_view, "collapsed", Some(&Value::from(true)));
-        actions.add_action_entries([build_action]);
-        Self::add_nav_row(sidebar_nav_list, "Main page", Page::Main);
+        actions.add_action_entries([navigation_action]);
+        sidebar.add_nav_row("Main page", Page::Main);
 
         return Self {
-            pages,
+            sidebar,
             split_view,
             breakpoint,
             actions,
@@ -43,27 +45,27 @@ impl View {
     }
 
     pub fn navigate(&self, page: Page) {
-        let page = self.pages.get(&page).unwrap().get_nav_page();
-        self.split_view.set_content(Some(page));
+        let action_target = Variant::from(page as i32);
+        self.actions
+            .activate_action(Self::NAVIGATE_ACTION_LABEL, Some(&action_target));
     }
 
-    fn build_navigate_action(
-        split_view: &NavigationSplitView,
-        pages: &Pages,
-    ) -> ActionEntry<SimpleActionGroup> {
-        let split_view_clone = split_view.clone();
-        let pages_clone = pages.clone();
+    fn build_navigate_action(split_view: &NavigationSplitView) -> ActionEntry<SimpleActionGroup> {
+        let split_view_ref = split_view.clone();
+        let pages = PageVariant::build_hash_map();
 
-        let action = ActionEntry::builder("navigate")
+        let action = ActionEntry::builder(View::NAVIGATE_ACTION_LABEL)
             .parameter_type(Some(VariantTy::INT32))
             .activate(move |_, _, parameter| {
                 // Using an int as parameter to map back to the enum
                 let enum_page_index = parameter.unwrap().try_get::<i32>().unwrap();
                 let page_enum: Page = unsafe { ::std::mem::transmute(enum_page_index) };
 
-                let page = pages_clone.get(&page_enum).unwrap().get_nav_page();
-                // FIXME - parent error on settings this
-                split_view_clone.set_content(Some(page));
+                let page = pages.get(&page_enum).unwrap().get_nav_page();
+                if page.parent().is_some() {
+                    return;
+                };
+                split_view_ref.set_content(Some(page));
             })
             .build();
 
@@ -79,20 +81,5 @@ impl View {
         let breakpoint = Breakpoint::new(breakpoint_condition);
 
         return breakpoint;
-    }
-
-    fn add_nav_row(sidebar_list: &ListBox, title: &str, page: Page) -> ActionRow {
-        let action_target = Variant::from(page as i32);
-
-        let row = ActionRow::builder()
-            .activatable(true)
-            .action_name(View::VIEW_ACTION_LABEL.to_owned() + "." + "navigate")
-            .action_target(&action_target)
-            .title(title)
-            .build();
-
-        sidebar_list.append(&row);
-
-        return row;
     }
 }
