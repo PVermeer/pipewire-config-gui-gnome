@@ -8,6 +8,7 @@ RUN sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
 RUN sudo dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld
 RUN sudo dnf install -y rpmfusion-free-release-tainted
 RUN sudo dnf install -y libdvdcss
+RUN sudo dnf install -y @gnome-desktop rustup libadwaita-devel
 
 # Create the user
 ARG USERNAME=vscode
@@ -18,3 +19,6 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 USER $USERNAME
+
+RUN rustup-init -y
+RUN mkdir -p /tmp/user/1000/gvfsd
