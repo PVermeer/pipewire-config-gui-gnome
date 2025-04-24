@@ -3,7 +3,7 @@ use libadwaita::{
     gtk::MenuButton,
 };
 
-use super::ApplicationWindow;
+use crate::application::window::ApplicationWindow;
 
 pub struct AppMenu {
     pub button: MenuButton,

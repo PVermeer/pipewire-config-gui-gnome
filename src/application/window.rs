@@ -1,8 +1,7 @@
-mod app_menu;
-mod view;
+pub mod view;
 
+use super::Application;
 use crate::config;
-use app_menu::AppMenu;
 use libadwaita::{
     AboutWindow,
     gtk::{
@@ -11,15 +10,16 @@ use libadwaita::{
     },
     prelude::AdwApplicationWindowExt,
 };
-use view::{View, pages::Page};
+use std::rc::Rc;
+use view::{View, app_menu::AppMenu};
 
 pub struct ApplicationWindow {
     pub window: libadwaita::ApplicationWindow,
+    pub view: View,
 }
 impl ApplicationWindow {
-    pub fn new(adw_application: &libadwaita::Application, title: &str) -> Self {
-        let title = title.to_string();
-        let app_menu = AppMenu::new();
+    pub fn new(adw_application: &libadwaita::Application) -> Self {
+        let title = config::APP_NAME.to_string();
         let view = View::new();
         let window = libadwaita::ApplicationWindow::builder()
             .application(adw_application)
@@ -29,17 +29,17 @@ impl ApplicationWindow {
             .content(&view.split_view)
             .build();
 
-        window.insert_action_group(AppMenu::ACTION_LABEL, Some(&app_menu.actions));
-        window.insert_action_group(View::ACTION_LABEL, Some(&view.actions));
-        window.add_breakpoint(view.breakpoint.clone());
-
-        view.sidebar.header.pack_end(&app_menu.button);
-        view.navigate(Page::Main);
-
-        return Self { window };
+        return Self { window, view };
     }
 
-    pub fn show(&self) {
+    pub fn init(&self, application: &Rc<Application>) {
+        self.view.init(application);
+        self.window
+            .insert_action_group(AppMenu::ACTION_LABEL, Some(&self.view.app_menu.actions));
+        self.window
+            .insert_action_group(View::ACTION_LABEL, Some(&self.view.actions));
+        self.window.add_breakpoint(self.view.breakpoint.clone());
+
         self.window.present();
     }
 

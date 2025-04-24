@@ -8,7 +8,7 @@ RUN sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
 RUN sudo dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld
 RUN sudo dnf install -y rpmfusion-free-release-tainted
 RUN sudo dnf install -y libdvdcss
-RUN sudo dnf install -y @gnome-desktop rustup libadwaita-devel
+RUN sudo dnf install -y @gnome-desktop rustup libadwaita-devel pipewire-utils
 
 # Create the user
 ARG USERNAME=vscode

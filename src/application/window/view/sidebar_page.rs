@@ -1,12 +1,10 @@
+use super::{NavPage, Page};
+use crate::application::window::view::View;
 use libadwaita::{
     ActionRow, HeaderBar, NavigationPage, ToolbarView,
     glib::Variant,
     gtk::{ListBox, SelectionMode},
 };
-
-use crate::application::window::view::View;
-
-use super::{NavPage, Page};
 
 pub struct SidebarPage {
     pub page: NavigationPage,
@@ -34,6 +32,8 @@ impl NavPage for SidebarPage {
 
         return Self { page, header, list };
     }
+
+    fn init(&mut self, _application: std::rc::Rc<crate::application::Application>) {}
 }
 impl SidebarPage {
     pub fn add_nav_row(&self, title: &str, page: Page) -> ActionRow {

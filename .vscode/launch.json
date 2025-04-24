@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Debug executable 'pipewire-config-gui-gnome'",
       "env": {
-        "RUST_BACKTRACE": "1"
+        "RUST_LOG": "trace"
       },
       "cargo": {
         "args": [

@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ashpd = { version = "0.11.0", default-features = false, features = ["gtk4", "async-std"] }
+env_logger = "0.11.8"
 libadwaita = { version = "0.7.2", features = ["v1_4"] }
+log = "0.4.27"
