@@ -1,8 +1,9 @@
 mod pages;
 mod pipewire;
+mod shared;
 mod window;
 
-use pages::{Page, PageVariant, Pages};
+use pages::{Page, Pages};
 use pipewire::Pipewire;
 use std::{cell::RefCell, rc::Rc};
 use window::ApplicationWindow;
@@ -16,7 +17,7 @@ impl Application {
     pub fn new(adw_application: &libadwaita::Application) -> Rc<Self> {
         let pipewire = Pipewire::new();
         let window = ApplicationWindow::new(adw_application);
-        let pages = PageVariant::build_hash_map();
+        let pages = Rc::new(RefCell::new(Pages::new()));
 
         return Rc::new(Self {
             window,

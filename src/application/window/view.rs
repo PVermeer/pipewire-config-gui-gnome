@@ -13,7 +13,6 @@ use libadwaita::{
         prelude::{ActionGroupExt, ActionMapExtManual},
     },
     glib::{Value, Variant, VariantTy},
-    gtk::prelude::WidgetExt,
 };
 use sidebar_page::SidebarPage;
 use std::rc::Rc;
@@ -80,17 +79,13 @@ impl View {
                 // Using an int as parameter to map back to the enum
                 let enum_page_index = parameter.unwrap().try_get::<i32>().unwrap();
                 let page_enum: Page = unsafe { ::std::mem::transmute(enum_page_index) };
-
                 let mut pages_mut = pages.borrow_mut();
 
-                let page = pages_mut.get_mut(&page_enum).unwrap();
-                page.init(application.clone());
-
-                let nav_page = page.get_nav_page();
-                if page.get_nav_page().parent().is_some() {
-                    return;
+                match page_enum {
+                    Page::Main => pages_mut
+                        .main
+                        .load_page(application.clone(), &split_view_ref),
                 };
-                split_view_ref.set_content(Some(nav_page));
             })
             .build();
 

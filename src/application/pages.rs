@@ -1,42 +1,29 @@
 mod main_page;
 
-use crate::application::Application;
+use super::{
+    Application,
+    shared::init::{Init, InitTrait},
+};
 use libadwaita::{
-    HeaderBar, NavigationPage, ToolbarView,
+    HeaderBar, NavigationPage, NavigationSplitView, ToolbarView,
     glib::object::IsA,
-    gtk::{self},
+    gtk::{self, prelude::WidgetExt},
 };
 use main_page::MainPage;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
-pub type Pages = HashMap<Page, PageVariant>;
+use std::rc::Rc;
 
 #[repr(i32)]
-#[derive(Eq, Hash, PartialEq)]
 pub enum Page {
     Main,
 }
 
-pub enum PageVariant {
-    Main(MainPage),
+pub struct Pages {
+    pub main: MainPage,
 }
-impl PageVariant {
-    pub fn build_hash_map() -> Rc<RefCell<Pages>> {
-        Rc::new(RefCell::new(HashMap::from([(
-            Page::Main,
-            PageVariant::Main(MainPage::new()),
-        )])))
-    }
-
-    pub fn init(&mut self, application: Rc<Application>) {
-        match self {
-            Self::Main(value) => &value.init(application),
-        };
-    }
-
-    pub fn get_nav_page(&self) -> &NavigationPage {
-        match self {
-            Self::Main(value) => &value.page,
+impl Pages {
+    pub fn new() -> Self {
+        Self {
+            main: MainPage::new(),
         }
     }
 }
@@ -48,7 +35,22 @@ pub trait NavPage {
 
     fn init(&mut self, _application: Rc<Application>);
 
-    fn build_nav_page(title: &str, content: &impl IsA<gtk::Widget>) -> (NavigationPage, HeaderBar) {
+    fn get_navpage(&self) -> &NavigationPage;
+
+    fn load_page(&mut self, application: Rc<Application>, view: &NavigationSplitView) {
+        self.init(application);
+
+        let nav_page = self.get_navpage();
+        if nav_page.parent().is_some() {
+            return;
+        };
+        view.set_content(Some(nav_page));
+    }
+
+    fn build_nav_page(
+        title: &str,
+        content: &impl IsA<gtk::Widget>,
+    ) -> (NavigationPage, HeaderBar, Init) {
         let header = HeaderBar::new();
         let toolbar = ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -60,6 +62,8 @@ pub trait NavPage {
             .child(&toolbar)
             .build();
 
-        return (page, header);
+        let init = Init::new();
+
+        return (page, header, init);
     }
 }

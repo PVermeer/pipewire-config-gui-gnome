@@ -1,5 +1,9 @@
 use super::NavPage;
-use crate::application::{Application, pipewire::Pipewire};
+use crate::application::{
+    Application,
+    pipewire::Pipewire,
+    shared::init::{Init, InitTrait},
+};
 use libadwaita::{
     NavigationPage,
     glib::{self},
@@ -14,7 +18,7 @@ use std::rc::Rc;
 pub struct MainPage {
     pub page: NavigationPage,
     pub button: Button,
-    init: bool,
+    init: Init,
 }
 impl NavPage for MainPage {
     const LABEL: &str = "main-page";
@@ -50,17 +54,13 @@ impl NavPage for MainPage {
         content_box.append(&label);
         content_box.append(&button);
 
-        let (page, _header) = Self::build_nav_page("Content", &content_box);
+        let (page, _header, init) = Self::build_nav_page("Content", &content_box);
 
-        return Self {
-            page,
-            button,
-            init: false,
-        };
+        return Self { page, button, init };
     }
 
     fn init(&mut self, application: Rc<Application>) {
-        if self.init {
+        if self.init.get_state() {
             return;
         }
 
@@ -71,7 +71,11 @@ impl NavPage for MainPage {
             glib::spawn_future_local(async { Self::get_document(pipewire).await });
         });
 
-        self.init = true;
+        self.init.set_state(true);
+    }
+
+    fn get_navpage(&self) -> &NavigationPage {
+        &self.page
     }
 }
 impl MainPage {
