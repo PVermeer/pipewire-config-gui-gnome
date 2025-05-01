@@ -1,14 +1,14 @@
 use super::NavPage;
 use crate::application::{
     Application,
-    pipewire::Pipewire,
+    pipewire::pipewire::Pipewire,
     shared::init::{Init, InitTrait},
 };
 use libadwaita::{
     NavigationPage,
     glib::{self},
     gtk::{
-        self, Button, Label, Orientation,
+        self, Button, Label,
         prelude::{BoxExt, ButtonExt},
     },
 };
@@ -17,21 +17,13 @@ use std::rc::Rc;
 
 pub struct MainPage {
     pub page: NavigationPage,
-    pub button: Button,
+    button: Button,
     init: Init,
 }
 impl NavPage for MainPage {
     const LABEL: &str = "main-page";
 
     fn new() -> Self {
-        let content_box = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
-            .margin_top(5)
-            .margin_bottom(5)
-            .margin_start(5)
-            .margin_end(5)
-            .build();
-
         let label = Label::builder()
             .label(concat!(
                 "<b>Label title</b>\n",
@@ -51,27 +43,21 @@ impl NavPage for MainPage {
             .label("Open file")
             .build();
 
+        let (page, _header, content_box, init) = Self::build_nav_page("Main page");
+
         content_box.append(&label);
         content_box.append(&button);
-
-        let (page, _header, init) = Self::build_nav_page("Content", &content_box);
 
         return Self { page, button, init };
     }
 
     fn init(&mut self, application: Rc<Application>) {
-        if self.init.get_state() {
-            return;
-        }
-
-        let pipewire = application.pipewire.clone();
-
-        self.button.connect_clicked(move |_| {
-            let pipewire = pipewire.clone();
-            glib::spawn_future_local(async { Self::get_document(pipewire).await });
-        });
-
+        self.on_init(application);
         self.init.set_state(true);
+    }
+
+    fn is_init(&self) -> bool {
+        self.init.get_state()
     }
 
     fn get_navpage(&self) -> &NavigationPage {
@@ -79,9 +65,18 @@ impl NavPage for MainPage {
     }
 }
 impl MainPage {
+    fn on_init(&mut self, application: Rc<Application>) {
+        let pipewire = application.pipewire.clone();
+
+        self.button.connect_clicked(move |_| {
+            let pipewire = pipewire.clone();
+            glib::spawn_future_local(async { Self::get_document(pipewire).await });
+        });
+    }
+
     async fn get_document(pipewire: Rc<Pipewire>) {
-        let a = &pipewire.default_config;
-        info!("{}", a);
+        let a = &pipewire.surround.current;
+        info!("{:?}", a);
         todo!()
     }
 }

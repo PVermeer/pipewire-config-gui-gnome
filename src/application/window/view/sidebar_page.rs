@@ -44,6 +44,10 @@ impl NavPage for SidebarPage {
         };
     }
 
+    fn is_init(&self) -> bool {
+        self.init.get_state()
+    }
+
     fn init(&mut self, _application: std::rc::Rc<crate::application::Application>) {
         self.init.set_state(true);
     }

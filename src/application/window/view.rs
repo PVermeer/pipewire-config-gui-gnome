@@ -55,7 +55,6 @@ impl View {
         self.breakpoint
             .add_setter(&self.split_view, "collapsed", Some(&Value::from(true)));
         self.actions.add_action_entries([navigation_action]);
-        self.sidebar.add_nav_row("Main page", Page::Main);
     }
 
     pub fn navigate(&self, page: Page) {
@@ -84,6 +83,9 @@ impl View {
                 match page_enum {
                     Page::Main => pages_mut
                         .main
+                        .load_page(application.clone(), &split_view_ref),
+                    Page::Surround => pages_mut
+                        .surround
                         .load_page(application.clone(), &split_view_ref),
                 };
             })

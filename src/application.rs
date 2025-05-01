@@ -4,7 +4,7 @@ mod shared;
 mod window;
 
 use pages::{Page, Pages};
-use pipewire::Pipewire;
+use pipewire::pipewire::Pipewire;
 use std::{cell::RefCell, rc::Rc};
 use window::ApplicationWindow;
 
@@ -15,7 +15,10 @@ pub struct Application {
 }
 impl Application {
     pub fn new(adw_application: &libadwaita::Application) -> Rc<Self> {
-        let pipewire = Pipewire::new();
+        let pipewire = match Pipewire::new() {
+            Ok(pipewire) => pipewire,
+            Err(error) => todo!("Pipewire class error handling:\n{:?}", error),
+        };
         let window = ApplicationWindow::new(adw_application);
         let pages = Rc::new(RefCell::new(Pages::new()));
 
@@ -28,7 +31,12 @@ impl Application {
 
     pub fn run_app(application: &Rc<Application>) {
         application.window.init(application);
-        application.navigate(Page::Main);
+
+        let sidebar = &application.window.view.sidebar;
+        sidebar.add_nav_row("Main page", Page::Main);
+        sidebar.add_nav_row("Surround", Page::Surround);
+
+        application.navigate(Page::Surround);
     }
 
     fn navigate(&self, page: Page) {
