@@ -4,8 +4,10 @@ use regex::Regex;
 use serde_json::{Map, Value};
 use std::process::Command;
 
+#[allow(dead_code)] // This can be None to get all the properties
 pub enum PwPulseSectionSub {
     Channelmix,
+    None,
 }
 pub enum PwPulseSection {
     StreamProperties(PwPulseSectionSub),
@@ -32,7 +34,11 @@ impl PwConfig {
         Ok(Self { current, default })
     }
 
-    fn get_current(file: &str, section: &str, subsection: &str) -> Result<Map<String, Value>> {
+    fn get_current(
+        file: &str,
+        section: &str,
+        subsection: Option<&str>,
+    ) -> Result<Map<String, Value>> {
         // This should be json format
         let pw_default_config_output = Command::new("pw-config")
             .arg("--name")
@@ -40,7 +46,6 @@ impl PwConfig {
             .arg("list")
             .arg("-LNr")
             .arg(section)
-            .arg(subsection)
             .output()
             .context(format!(
                 "Reading output of pw-config for {} {}",
@@ -57,14 +62,20 @@ impl PwConfig {
         ))?;
 
         let mut json_object = json_parsed.as_object().unwrap().to_owned();
-        json_object.retain(|key, _value| key.starts_with(&format!("{}.", subsection)));
+        if let Some(value) = subsection {
+            json_object.retain(|key, _value| key.starts_with(&format!("{}.", value)));
+        }
 
         debug!(target: Self::LOG_TARGET, "{} {} current json:\n{:#?}", file, section, &json_object);
 
         Ok(json_object)
     }
 
-    fn get_default(file: &str, section: &str, subsection: &str) -> Result<Map<String, Value>> {
+    fn get_default(
+        file: &str,
+        section: &str,
+        subsection: Option<&str>,
+    ) -> Result<Map<String, Value>> {
         let pw_default_config_output = Command::new("pw-config")
             .arg("--name")
             .arg(file)
@@ -73,7 +84,6 @@ impl PwConfig {
             .arg("-p")
             .arg("/usr/share/pipewire")
             .arg(section)
-            .arg(subsection)
             .output()
             .context(format!(
                 "Reading output of pw-config for {} {}",
@@ -82,7 +92,7 @@ impl PwConfig {
 
         let spa_json = String::from_utf8_lossy(&pw_default_config_output.stdout).into_owned();
 
-        debug!(target: Self::LOG_TARGET, "{} {} {} default raw:\n{}", file, section, subsection, spa_json);
+        debug!(target: Self::LOG_TARGET, "{} {} {:?} default raw:\n{}", file, section, subsection, spa_json);
 
         let json = Self::parse_spa_json(spa_json);
 
@@ -92,19 +102,21 @@ impl PwConfig {
         ))?;
 
         let mut json_object = json_parsed.as_object().unwrap().to_owned();
-        json_object.retain(|key, _value| key.starts_with(&format!("{}.", subsection)));
+        if let Some(value) = subsection {
+            json_object.retain(|key, _value| key.starts_with(&format!("{}.", value)));
+        }
 
-        debug!(target: Self::LOG_TARGET, "{} {} {} default json:\n{:#?}", file, section, subsection, json_object);
+        debug!(target: Self::LOG_TARGET, "{} {} {:?} default json:\n{:#?}", file, section, subsection, json_object);
 
         Ok(json_object)
     }
 
     fn get_config_file_and_sections(
         file: &PwConfigFile,
-    ) -> (&'static str, &'static str, &'static str) {
+    ) -> (&'static str, &'static str, Option<&str>) {
         let file_name: &str;
         let section_name: &str;
-        let subsection_name: &str;
+        let subsection_name: Option<&str>;
 
         match file {
             PwConfigFile::PipewirePulse(section) => {
@@ -115,7 +127,8 @@ impl PwConfig {
                         section_name = "stream.properties";
 
                         match subsection {
-                            PwPulseSectionSub::Channelmix => subsection_name = "channelmix",
+                            PwPulseSectionSub::Channelmix => subsection_name = Some("channelmix"),
+                            PwPulseSectionSub::None => subsection_name = None,
                         }
                     }
                 }

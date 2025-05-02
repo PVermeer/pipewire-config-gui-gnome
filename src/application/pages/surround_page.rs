@@ -55,31 +55,38 @@ impl SurroundPage {
 
     fn build_default_sections(&self, pipewire: Rc<Pipewire>) -> Vec<Label> {
         let default = &pipewire.surround.default;
-        let mut map: HashMap<&str, Vec<(&str, &Value)>> = HashMap::new();
+        let mut map: HashMap<Option<&str>, Vec<(&str, &Value)>> = HashMap::new();
 
         for (key, value) in default {
+            let mut section = None;
+            let mut prop: &str = key;
+
             if key.contains('.') {
                 let mut split = key.split('.');
-                let section = split.next().unwrap();
-                let prop = split.next().unwrap();
-
-                let mapped_section = match map.get_mut(section) {
-                    None => {
-                        map.insert(section, Vec::new());
-                        map.get_mut(section).unwrap()
-                    }
-                    Some(value) => value,
-                };
-
-                mapped_section.push((prop, value));
+                section = split.next();
+                prop = split.next().unwrap();
             }
+
+            let mapped_section = match map.get_mut(&section) {
+                None => {
+                    map.insert(section, Vec::new());
+                    map.get_mut(&section).unwrap()
+                }
+                Some(value) => value,
+            };
+            mapped_section.push((prop, value));
         }
 
         let mut labels: Vec<Label> = Vec::new();
 
-        for (section_name, value) in map {
+        for (section_name, values) in map {
+            let label_markup = match section_name {
+                None => format!("<b></b>{:?}", values),
+                Some(value) => format!("<b>{}</b>{:?}", value, values),
+            };
+
             let label = Label::builder()
-                .label(format!("<b>{}</b><span>{:?}</span>", section_name, value))
+                .label(label_markup)
                 .wrap(true)
                 .use_markup(true)
                 .halign(gtk::Align::Start)
@@ -87,7 +94,6 @@ impl SurroundPage {
 
             labels.push(label);
         }
-
         labels
     }
 }
