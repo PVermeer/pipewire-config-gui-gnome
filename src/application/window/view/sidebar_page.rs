@@ -10,7 +10,7 @@ use libadwaita::{
 };
 
 pub struct SidebarPage {
-    pub page: NavigationPage,
+    pub nav_page: NavigationPage,
     pub header: HeaderBar,
     init: Init,
     list: ListBox,
@@ -28,7 +28,7 @@ impl NavPage for SidebarPage {
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&list));
 
-        let page = NavigationPage::builder()
+        let nav_page = NavigationPage::builder()
             .title("List")
             .tag("sidebar")
             .child(&toolbar)
@@ -37,7 +37,7 @@ impl NavPage for SidebarPage {
         let init = Init::new();
 
         return Self {
-            page,
+            nav_page,
             header,
             list,
             init,
@@ -53,7 +53,7 @@ impl NavPage for SidebarPage {
     }
 
     fn get_navpage(&self) -> &NavigationPage {
-        &self.page
+        &self.nav_page
     }
 }
 impl SidebarPage {

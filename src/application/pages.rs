@@ -6,7 +6,7 @@ use super::{
     shared::init::{Init, InitTrait},
 };
 use libadwaita::{
-    HeaderBar, NavigationPage, NavigationSplitView, ToolbarView,
+    HeaderBar, NavigationPage, NavigationSplitView, PreferencesPage, ToolbarView,
     gtk::{self, Orientation, prelude::WidgetExt},
 };
 use main_page::MainPage;
@@ -56,12 +56,14 @@ pub trait NavPage {
     }
 
     fn build_nav_page(title: &str) -> (NavigationPage, HeaderBar, gtk::Box, Init) {
+        const MARGIN: i32 = 20;
+
         let content_box = gtk::Box::builder()
             .orientation(Orientation::Vertical)
-            .margin_top(5)
-            .margin_bottom(5)
-            .margin_start(5)
-            .margin_end(5)
+            .margin_top(MARGIN)
+            .margin_bottom(MARGIN)
+            .margin_start(MARGIN)
+            .margin_end(MARGIN)
             .build();
 
         let header = HeaderBar::new();
@@ -69,7 +71,7 @@ pub trait NavPage {
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&content_box));
 
-        let page = NavigationPage::builder()
+        let nav_page = NavigationPage::builder()
             .title(title)
             .tag(title)
             .child(&toolbar)
@@ -77,6 +79,24 @@ pub trait NavPage {
 
         let init = Init::new();
 
-        return (page, header, content_box, init);
+        return (nav_page, header, content_box, init);
+    }
+
+    fn build_pref_page(title: &str) -> (NavigationPage, PreferencesPage, HeaderBar, Init) {
+        let pref_page = PreferencesPage::new();
+        let header = HeaderBar::new();
+        let toolbar = ToolbarView::new();
+        toolbar.add_top_bar(&header);
+        toolbar.set_content(Some(&pref_page));
+
+        let nav_page = NavigationPage::builder()
+            .title(title)
+            .tag(title)
+            .child(&toolbar)
+            .build();
+
+        let init = Init::new();
+
+        return (nav_page, pref_page, header, init);
     }
 }

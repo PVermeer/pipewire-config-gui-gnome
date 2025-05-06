@@ -16,7 +16,7 @@ use log::info;
 use std::rc::Rc;
 
 pub struct MainPage {
-    pub page: NavigationPage,
+    pub nav_page: NavigationPage,
     button: Button,
     init: Init,
 }
@@ -43,12 +43,16 @@ impl NavPage for MainPage {
             .label("Open file")
             .build();
 
-        let (page, _header, content_box, init) = Self::build_nav_page("Main page");
+        let (nav_page, _header, content_box, init) = Self::build_nav_page("Main page");
 
         content_box.append(&label);
         content_box.append(&button);
 
-        return Self { page, button, init };
+        return Self {
+            nav_page,
+            button,
+            init,
+        };
     }
 
     fn init(&mut self, application: Rc<Application>) {
@@ -61,7 +65,7 @@ impl NavPage for MainPage {
     }
 
     fn get_navpage(&self) -> &NavigationPage {
-        &self.page
+        &self.nav_page
     }
 }
 impl MainPage {

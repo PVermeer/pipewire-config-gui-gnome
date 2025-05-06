@@ -33,7 +33,7 @@ impl View {
         let sidebar = SidebarPage::new();
         let app_menu = AppMenu::new();
         let split_view = NavigationSplitView::builder()
-            .sidebar(&sidebar.page)
+            .sidebar(&sidebar.nav_page)
             .show_content(true)
             .build();
         let actions = SimpleActionGroup::new();

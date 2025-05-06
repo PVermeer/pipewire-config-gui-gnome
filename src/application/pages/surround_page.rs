@@ -6,26 +6,27 @@ use crate::application::{
 };
 use convert_case::{Case, Casing};
 use libadwaita::{
-    NavigationPage, SpinRow, SwitchRow,
+    ComboRow, EntryRow, NavigationPage, PreferencesGroup, PreferencesPage, SpinRow, SwitchRow,
     glib::object::Cast,
-    gtk::{self, Adjustment, Label, Widget, prelude::BoxExt},
+    gtk::{Adjustment, StringList, Widget},
+    prelude::{PreferencesGroupExt, PreferencesPageExt},
 };
 use std::{collections::HashMap, rc::Rc};
 
 pub struct SurroundPage {
-    pub page: NavigationPage,
-    content_box: gtk::Box,
+    pub nav_page: NavigationPage,
+    pref_page: PreferencesPage,
     init: Init,
 }
 impl NavPage for SurroundPage {
     const LABEL: &str = "surround-page";
 
     fn new() -> Self {
-        let (page, _header, content_box, init) = Self::build_nav_page("Surround");
+        let (nav_page, pref_page, _header, init) = Self::build_pref_page("Surround");
 
         return Self {
-            page,
-            content_box,
+            nav_page,
+            pref_page,
             init,
         };
     }
@@ -40,24 +41,24 @@ impl NavPage for SurroundPage {
     }
 
     fn get_navpage(&self) -> &NavigationPage {
-        &self.page
+        &self.nav_page
     }
 }
 impl SurroundPage {
     fn on_onit(&self, application: Rc<Application>) {
         let pipewire = application.pipewire.clone();
 
-        self.build_default_sections(pipewire);
-        // let labels = self.build_default_sections(pipewire);
-
-        // for label in labels {
-        //     self.content_box.append(&label);
-        // }
+        let section_groups = self.build_default_sections(pipewire);
+        for group in section_groups {
+            self.pref_page.add(&group);
+        }
     }
 
-    fn build_default_sections(&self, pipewire: Rc<Pipewire>) {
+    fn build_default_sections(&self, pipewire: Rc<Pipewire>) -> Vec<PreferencesGroup> {
         let default = &pipewire.surround.default;
-        let mut map: HashMap<Option<&str>, Vec<(&str, &serde_json::Value)>> = HashMap::new();
+        let mut map: HashMap<Option<&str>, Vec<(&str, &(serde_json::Value, Option<Vec<String>>))>> =
+            HashMap::new();
+        let mut preferences_groups: Vec<PreferencesGroup> = Vec::new();
 
         for (key, value) in default {
             let mut section = None;
@@ -79,31 +80,28 @@ impl SurroundPage {
             mapped_section.push((prop, value));
         }
 
-        // let mut labels: Vec<Label> = Vec::new();
-
         for (section_name, values) in map {
-            let label_markup = match section_name {
-                None => format!("<b>Misc</b>"),
-                Some(section) => format!("<b>{}</b>", section.to_case(Case::Title)),
+            let section = match section_name {
+                None => String::new(),
+                Some(section) => section.to_case(Case::Title),
             };
+            let preferences_group = PreferencesGroup::builder().title(section).build();
 
-            let label = Label::builder()
-                .label(label_markup)
-                .wrap(true)
-                .use_markup(true)
-                .halign(gtk::Align::Start)
-                .build();
-
-            self.content_box.append(&label);
-            // labels.push(label);
-            for (key, value) in values {
-                self.content_box.append(&self.build_input_row(key, value));
+            for (key, (value, options)) in values {
+                let input_row = self.build_input_row(key, value, options);
+                preferences_group.add(&input_row);
             }
+            preferences_groups.push(preferences_group);
         }
-        // labels
+        preferences_groups
     }
 
-    fn build_input_row(&self, key: &str, value: &serde_json::Value) -> Widget {
+    fn build_input_row(
+        &self,
+        key: &str,
+        value: &serde_json::Value,
+        options: &Option<Vec<String>>,
+    ) -> Widget {
         let title = key.from_case(Case::Kebab).to_case(Case::Sentence);
 
         match value {
@@ -130,7 +128,22 @@ impl SurroundPage {
                 .build()
                 .upcast(),
 
-            // serde_json::Value::String(_value) => Row::None,
+            serde_json::Value::String(value) => match options {
+                Some(options_value) => {
+                    let list = StringList::new(&[]);
+                    for option in options_value {
+                        list.append(&option);
+                    }
+                    let combo_row = ComboRow::builder().title(title).model(&list).build();
+                    combo_row.upcast()
+                }
+                None => EntryRow::builder()
+                    .title(title)
+                    .text(value)
+                    .build()
+                    .upcast(),
+            },
+
             // serde_json::Value::Array(_value) => Row::None,
             // serde_json::Value::Object(_value) => Row::None,
             // serde_json::Value::Null => Row::None,

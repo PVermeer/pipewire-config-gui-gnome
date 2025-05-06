@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use log::debug;
 use regex::Regex;
 use serde_json::{Map, Value};
-use std::process::Command;
+use std::{collections::HashMap, process::Command};
 
 #[allow(dead_code)] // This can be None to get all the properties
 pub enum PwPulseSectionSub {
@@ -19,7 +19,7 @@ pub enum PwConfigFile {
 
 pub struct PwConfig {
     pub current: Map<String, Value>,
-    pub default: Map<String, Value>,
+    pub default: HashMap<String, (Value, Option<Vec<String>>)>,
 }
 impl PwConfig {
     const LOG_TARGET: &str = "PwConfig";
@@ -75,7 +75,7 @@ impl PwConfig {
         file: &str,
         section: &str,
         subsection: Option<&str>,
-    ) -> Result<Map<String, Value>> {
+    ) -> Result<HashMap<String, (Value, Option<Vec<String>>)>> {
         let pw_default_config_output = Command::new("pw-config")
             .arg("--name")
             .arg(file)
@@ -94,7 +94,8 @@ impl PwConfig {
 
         debug!(target: Self::LOG_TARGET, "{} {} {:?} default raw:\n{}", file, section, subsection, spa_json);
 
-        let json = Self::parse_spa_json(spa_json);
+        let (json, options) = Self::parse_spa_json(spa_json);
+        let mut default_map: HashMap<String, (Value, Option<Vec<String>>)> = HashMap::new();
 
         let json_parsed: Value = serde_json::from_str(&json).context(format!(
             "Parsing output of pw-config for {} {}",
@@ -108,7 +109,19 @@ impl PwConfig {
 
         debug!(target: Self::LOG_TARGET, "{} {} {:?} default json:\n{:#?}", file, section, subsection, json_object);
 
-        Ok(json_object)
+        for (key, value) in json_object {
+            match &options {
+                Some(options_map) => match options_map.get(&key) {
+                    None => default_map.insert(key, (value, None)),
+                    Some(options_vec) => {
+                        default_map.insert(key, (value, Some(options_vec.to_owned())))
+                    }
+                },
+                None => default_map.insert(key, (value, None)),
+            };
+        }
+
+        Ok(default_map)
     }
 
     fn get_config_file_and_sections(
@@ -138,20 +151,23 @@ impl PwConfig {
         (file_name, section_name, subsection_name)
     }
 
-    fn parse_spa_json(spa_json: String) -> String {
+    fn parse_spa_json(spa_json: String) -> (String, Option<HashMap<String, Vec<String>>>) {
         debug!(target: Self::LOG_TARGET,"Parsing spa-json to json");
 
         let split = spa_json.lines();
-        let regex = Regex::new(r"^.*\s+=\s.*$").unwrap();
+        let regex_key_value = Regex::new(r"^.*\s+=\s.*$").unwrap();
+        let regex_options = Regex::new(r"^(.+,.+)+$").unwrap();
         let mut json = String::new();
+        let mut options_map: HashMap<String, Vec<String>> = HashMap::new();
 
         json.push('{');
 
         for line in split {
             let mut mut_line = line.trim();
 
-            if regex.is_match(mut_line) {
+            if regex_key_value.is_match(mut_line) {
                 let mut new_line = String::new();
+                let mut value_options: Option<Vec<String>> = None;
 
                 // Trim key-values
                 if mut_line.starts_with("#") {
@@ -159,6 +175,7 @@ impl PwConfig {
                 }
                 let mut_line = &mut_line.replace(" ", "");
                 let line_split = mut_line.split("=");
+                let mut line_key: Option<String> = None;
 
                 // Seperate key from value
                 for (i, line_s) in line_split.enumerate() {
@@ -169,19 +186,37 @@ impl PwConfig {
                     // Key
                     if i == 0 {
                         new_line.push_str(&format!("\"{}\"", line_s));
+                        line_key = Some(line_s.to_string());
                         continue;
                     }
-                    // Seperator
-                    new_line.push(':');
 
-                    // Value
+                    new_line.push(':');
                     let mut value = line_s.to_string();
 
                     // Remove potentional comments after value
                     if value.contains('#') {
-                        value = line_s.split('#').next().unwrap().to_string();
+                        let mut split_value = line_s.split("#");
+                        value = split_value.next().unwrap().to_string();
+
+                        let comment = split_value.next();
+                        match comment {
+                            Some(comment_value) => {
+                                if regex_options.is_match(comment_value) {
+                                    let option_values =
+                                        comment_value.split(',').map(|s| s.to_owned()).collect();
+
+                                    value_options = Some(option_values);
+                                }
+                            }
+                            None => {}
+                        }
                     }
                     value = value.trim().to_string();
+
+                    // Also add value to options
+                    if let Some(ref mut option_values) = value_options {
+                        option_values.push(value.clone());
+                    }
 
                     // Check if primitive type should have quotes
                     if !value.parse::<f64>().is_ok() && !value.parse::<bool>().is_ok() {
@@ -192,6 +227,13 @@ impl PwConfig {
                 }
 
                 debug!(target: Self::LOG_TARGET,"Found key-value: {}", new_line);
+                if let Some(options) = value_options {
+                    debug!(target: Self::LOG_TARGET,"Found options: {:?}", options);
+
+                    if let Some(key) = line_key {
+                        options_map.insert(key, options);
+                    }
+                }
 
                 json.push_str(&new_line);
                 json.push(',');
@@ -206,7 +248,13 @@ impl PwConfig {
 
         debug!(target: Self::LOG_TARGET, "spa-json parse: {}", json);
 
-        json
+        let options = if let 0 = options_map.len() {
+            None
+        } else {
+            Some(options_map)
+        };
+
+        (json, options)
     }
 }
 
@@ -252,8 +300,16 @@ mod tests {
         let json_expected = String::from(
             r#"{"node.latency":"1024/48000","node.autoconnect":true,"resample.quality":4,"channelmix.normalize":false,"channelmix.mix-lfe":true,"channelmix.upmix":true,"channelmix.upmix-method":"psd","channelmix.lfe-cutoff":150,"channelmix.fc-cutoff":12000,"channelmix.rear-delay":12.0,"channelmix.stereo-widen":0.0,"channelmix.hilbert-taps":0,"dither.noise":0}"#,
         );
-        let json = PwConfig::parse_spa_json(spa_json);
+        let (json, options) = PwConfig::parse_spa_json(spa_json);
 
         assert_eq!(json, json_expected);
+        assert_eq!(
+            options
+                .unwrap()
+                .get("channelmix.upmix-method")
+                .unwrap()
+                .join(","),
+            "none,simple,psd"
+        )
     }
 }
