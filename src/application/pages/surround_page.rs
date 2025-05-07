@@ -80,7 +80,9 @@ impl SurroundPage {
             mapped_section.push((prop, value));
         }
 
-        for (section_name, values) in map {
+        for (section_name, mut values) in map {
+            values.sort_by(|(a, _), (b, _)| a.cmp(b));
+
             let section = match section_name {
                 None => String::new(),
                 Some(section) => section.to_case(Case::Title),
@@ -93,6 +95,8 @@ impl SurroundPage {
             }
             preferences_groups.push(preferences_group);
         }
+
+        preferences_groups.sort_by(|a, b| a.title().cmp(&b.title()));
         preferences_groups
     }
 

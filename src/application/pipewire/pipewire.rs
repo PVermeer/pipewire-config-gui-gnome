@@ -8,7 +8,7 @@ pub struct Pipewire {
 impl Pipewire {
     pub fn new() -> Result<Rc<Self>> {
         let surround = PwConfig::new(PwConfigFile::PipewirePulse(
-            PwPulseSection::StreamProperties(PwPulseSectionSub::Channelmix),
+            PwPulseSection::StreamProperties(PwPulseSectionSub::None),
         ))?;
 
         Ok(Rc::new(Self { surround }))
