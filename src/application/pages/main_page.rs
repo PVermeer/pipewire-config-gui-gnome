@@ -19,11 +19,13 @@ pub struct MainPage {
     pub nav_page: NavigationPage,
     button: Button,
     init: Init,
+    title: String,
 }
 impl NavPage for MainPage {
     const LABEL: &str = "main-page";
 
     fn new() -> Self {
+        let title = String::from("Main page");
         let label = Label::builder()
             .label(concat!(
                 "<b>Label title</b>\n",
@@ -43,7 +45,7 @@ impl NavPage for MainPage {
             .label("Open file")
             .build();
 
-        let (nav_page, _header, content_box, init) = Self::build_nav_page("Main page");
+        let (nav_page, _header, content_box, init) = Self::build_nav_page(&title);
 
         content_box.append(&label);
         content_box.append(&button);
@@ -52,6 +54,7 @@ impl NavPage for MainPage {
             nav_page,
             button,
             init,
+            title,
         };
     }
 
@@ -62,6 +65,10 @@ impl NavPage for MainPage {
 
     fn is_init(&self) -> bool {
         self.init.get_state()
+    }
+
+    fn get_title(&self) -> &str {
+        &self.title
     }
 
     fn get_navpage(&self) -> &NavigationPage {

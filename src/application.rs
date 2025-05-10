@@ -3,7 +3,7 @@ mod pipewire;
 mod shared;
 mod window;
 
-use pages::{Page, Pages};
+use pages::{NavPage, Page, Pages};
 use pipewire::pipewire::Pipewire;
 use std::{cell::RefCell, rc::Rc};
 use window::ApplicationWindow;
@@ -33,8 +33,12 @@ impl Application {
         application.window.init(application);
 
         let sidebar = &application.window.view.sidebar;
-        sidebar.add_nav_row("Main page", Page::Main);
-        sidebar.add_nav_row("Surround", Page::Surround);
+        {
+            // Scoped to drop borrow before continuing
+            let pages = application.pages.borrow();
+            sidebar.add_nav_row(pages.main.get_title(), Page::Main);
+            sidebar.add_nav_row(pages.surround.get_title(), Page::Surround);
+        }
 
         application.navigate(Page::Surround);
     }

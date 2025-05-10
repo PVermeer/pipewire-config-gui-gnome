@@ -13,12 +13,14 @@ pub struct SidebarPage {
     pub nav_page: NavigationPage,
     pub header: HeaderBar,
     init: Init,
+    title: String,
     list: ListBox,
 }
 impl NavPage for SidebarPage {
     const LABEL: &str = "sidebar-page";
 
     fn new() -> Self {
+        let title = String::from("List");
         let list = ListBox::builder()
             .selection_mode(SelectionMode::Single)
             .css_classes(["navigation-sidebar"])
@@ -29,7 +31,7 @@ impl NavPage for SidebarPage {
         toolbar.set_content(Some(&list));
 
         let nav_page = NavigationPage::builder()
-            .title("List")
+            .title(&title)
             .tag("sidebar")
             .child(&toolbar)
             .build();
@@ -41,11 +43,16 @@ impl NavPage for SidebarPage {
             header,
             list,
             init,
+            title,
         };
     }
 
     fn is_init(&self) -> bool {
         self.init.get_state()
+    }
+
+    fn get_title(&self) -> &str {
+        &self.title
     }
 
     fn init(&mut self, _application: std::rc::Rc<crate::application::Application>) {

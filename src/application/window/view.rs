@@ -39,13 +39,13 @@ impl View {
         let actions = SimpleActionGroup::new();
         let breakpoint = Self::build_breakpoint();
 
-        return Self {
+        Self {
             app_menu,
             sidebar,
             split_view,
             breakpoint,
             actions,
-        };
+        }
     }
 
     pub fn init(&self, application: &Rc<Application>) {
@@ -91,7 +91,7 @@ impl View {
             })
             .build();
 
-        return action;
+        action
     }
 
     fn build_breakpoint() -> Breakpoint {
@@ -102,6 +102,6 @@ impl View {
         );
         let breakpoint = Breakpoint::new(breakpoint_condition);
 
-        return breakpoint;
+        breakpoint
     }
 }

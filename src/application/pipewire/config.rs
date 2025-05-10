@@ -17,9 +17,12 @@ pub enum PwConfigFile {
     PipewirePulse(PwPulseSection),
 }
 
+pub type MapWithOptions = HashMap<String, (Value, Option<Vec<String>>)>;
+
 pub struct PwConfig {
     pub current: Map<String, Value>,
-    pub default: HashMap<String, (Value, Option<Vec<String>>)>,
+    pub default: MapWithOptions,
+    pub paths: Map<String, Value>,
 }
 impl PwConfig {
     const LOG_TARGET: &str = "PwConfig";
@@ -28,10 +31,39 @@ impl PwConfig {
         let (file_name, section_name, subsection_name) =
             Self::get_config_file_and_sections(&config_file);
 
+        let paths = Self::get_paths(file_name)?;
         let current = Self::get_current(file_name, section_name, subsection_name)?;
         let default = Self::get_default(file_name, section_name, subsection_name)?;
 
-        Ok(Self { current, default })
+        Ok(Self {
+            current,
+            default,
+            paths,
+        })
+    }
+
+    fn get_paths(file: &str) -> Result<Map<String, Value>> {
+        // This should be json format
+        let pw_default_config_output = Command::new("pw-config")
+            .arg("--name")
+            .arg(file)
+            .arg("paths")
+            .arg("-LNr")
+            .output()
+            .context(format!("Reading paths of pw-config for {}", file))?;
+
+        let json = String::from_utf8_lossy(&pw_default_config_output.stdout).into_owned();
+
+        debug!(target: Self::LOG_TARGET, "{} paths raw:\n{}",file, json);
+
+        let json_parsed: Value = serde_json::from_str(&json)
+            .context(format!("Parsing paths of pw-config for {}", file))?;
+
+        let json_object = json_parsed.as_object().unwrap().to_owned();
+
+        debug!(target: Self::LOG_TARGET, "{} paths json:\n{:#?}", file, &json_object);
+
+        Ok(json_object)
     }
 
     fn get_current(
@@ -71,11 +103,7 @@ impl PwConfig {
         Ok(json_object)
     }
 
-    fn get_default(
-        file: &str,
-        section: &str,
-        subsection: Option<&str>,
-    ) -> Result<HashMap<String, (Value, Option<Vec<String>>)>> {
+    fn get_default(file: &str, section: &str, subsection: Option<&str>) -> Result<MapWithOptions> {
         let pw_default_config_output = Command::new("pw-config")
             .arg("--name")
             .arg(file)
@@ -95,7 +123,7 @@ impl PwConfig {
         debug!(target: Self::LOG_TARGET, "{} {} {:?} default raw:\n{}", file, section, subsection, spa_json);
 
         let (json, options) = Self::parse_spa_json(spa_json);
-        let mut default_map: HashMap<String, (Value, Option<Vec<String>>)> = HashMap::new();
+        let mut default_map: MapWithOptions = HashMap::new();
 
         let json_parsed: Value = serde_json::from_str(&json).context(format!(
             "Parsing output of pw-config for {} {}",
