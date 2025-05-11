@@ -10,7 +10,7 @@ use convert_case::{Case, Casing};
 use libadwaita::{
     ComboRow, EntryRow, HeaderBar, NavigationPage, NavigationSplitView, PreferencesGroup,
     PreferencesPage, SpinRow, SwitchRow, ToolbarView,
-    gio::{ActionEntry, SimpleActionGroup, prelude::ActionMapExtManual},
+    gio::{ActionEntry, SimpleActionGroup},
     glib::{VariantTy, object::Cast, variant::ToVariant},
     gtk::{
         self, Adjustment, Orientation, StringList, Widget,
@@ -18,6 +18,7 @@ use libadwaita::{
     },
     prelude::{ComboRowExt, PreferencesGroupExt},
 };
+use log::debug;
 use main_page::MainPage;
 use serde_json::json;
 use std::{collections::HashMap, rc::Rc};
@@ -44,6 +45,7 @@ impl Pages {
 
 pub trait NavPage {
     const LABEL: &str;
+    const LOG_TARGET: &str;
 
     fn new() -> Self;
 
@@ -113,12 +115,10 @@ pub trait PrefPage: NavPage {
         let header = HeaderBar::new();
         let toolbar = ToolbarView::new();
         let action_group = SimpleActionGroup::new();
-        let input_action = Self::build_input_action();
 
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&pref_page));
 
-        action_group.add_action_entries([input_action]);
         pref_page.insert_action_group(Self::ACTION_LABEL, Some(&action_group));
 
         let nav_page = NavigationPage::builder()
@@ -300,13 +300,25 @@ pub trait PrefPage: NavPage {
         }
     }
 
-    fn build_input_action() -> ActionEntry<SimpleActionGroup> {
+    fn build_input_action(&self, pw_config: &PwConfig) -> ActionEntry<SimpleActionGroup> {
+        let pw_config_new = pw_config.new.clone();
         let action = ActionEntry::builder(Self::INPUT_ACTION_LABEL)
             .parameter_type(Some(VariantTy::STRING))
             .activate(move |_group, _action, parameter| {
                 let string_value = parameter.unwrap().try_get::<String>().unwrap();
                 let json_value: serde_json::Value = serde_json::from_str(&string_value).unwrap();
-                println!("========= INPUT ACTION:  {:#?}", json_value);
+
+                debug!(target: Self::LOG_TARGET, "Input action:\n{:#?}", json_value);
+
+                let json_object = json_value.as_object().unwrap();
+                let key = json_object.keys().next().unwrap();
+                let value = json_object.values().next().unwrap();
+
+                pw_config_new
+                    .borrow_mut()
+                    .insert(key.to_owned(), value.clone());
+
+                debug!(target: Self::LOG_TARGET, "Input action new config:\n{:#?}", pw_config_new);
             })
             .build();
 

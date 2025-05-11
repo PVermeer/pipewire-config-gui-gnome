@@ -23,6 +23,7 @@ pub struct MainPage {
 }
 impl NavPage for MainPage {
     const LABEL: &str = "main-page";
+    const LOG_TARGET: &str = Self::LABEL;
 
     fn new() -> Self {
         let title = String::from("Main page");

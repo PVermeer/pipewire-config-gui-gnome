@@ -18,6 +18,7 @@ pub struct SidebarPage {
 }
 impl NavPage for SidebarPage {
     const LABEL: &str = "sidebar-page";
+    const LOG_TARGET: &str = Self::LABEL;
 
     fn new() -> Self {
         let title = String::from("List");

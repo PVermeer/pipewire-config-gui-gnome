@@ -3,7 +3,11 @@ use crate::application::{
     Application,
     shared::init::{Init, InitTrait},
 };
-use libadwaita::{NavigationPage, PreferencesPage, prelude::PreferencesPageExt};
+use libadwaita::{
+    NavigationPage, PreferencesPage,
+    gio::{SimpleActionGroup, prelude::ActionMapExtManual},
+    prelude::PreferencesPageExt,
+};
 use std::rc::Rc;
 
 pub struct SurroundPage {
@@ -11,19 +15,22 @@ pub struct SurroundPage {
     pref_page: PreferencesPage,
     init: Init,
     title: String,
+    actions: SimpleActionGroup,
 }
 impl NavPage for SurroundPage {
     const LABEL: &str = "surround-page";
+    const LOG_TARGET: &str = Self::LABEL;
 
     fn new() -> Self {
         let title = String::from("Surround");
-        let (nav_page, pref_page, _header, init, _actions) = Self::build_pref_page(&title);
+        let (nav_page, pref_page, _header, init, actions) = Self::build_pref_page(&title);
 
         return Self {
             nav_page,
             pref_page,
             init,
             title,
+            actions,
         };
     }
 
@@ -52,6 +59,9 @@ impl PrefPage for SurroundPage {
 impl SurroundPage {
     fn on_onit(&self, application: Rc<Application>) {
         let pipewire = application.pipewire.clone();
+
+        let input_action = self.build_input_action(&pipewire.surround);
+        self.actions.add_action_entries([input_action]);
 
         let enable_pref_group = self.build_page_switch();
         self.pref_page.add(&enable_pref_group);

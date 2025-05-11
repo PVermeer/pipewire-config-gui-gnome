@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use log::debug;
 use regex::Regex;
-use serde_json::{Map, Value};
-use std::{collections::HashMap, process::Command};
+use serde_json::{Map, Value, json};
+use std::{cell::RefCell, collections::HashMap, process::Command, rc::Rc};
 
 #[allow(dead_code)] // This can be None to get all the properties
 pub enum PwPulseSectionSub {
@@ -22,6 +22,7 @@ pub type MapWithOptions = HashMap<String, (Value, Option<Vec<String>>)>;
 pub struct PwConfig {
     pub current: Map<String, Value>,
     pub default: MapWithOptions,
+    pub new: Rc<RefCell<Map<String, Value>>>,
     pub paths: Map<String, Value>,
 }
 impl PwConfig {
@@ -34,10 +35,12 @@ impl PwConfig {
         let paths = Self::get_paths(file_name)?;
         let current = Self::get_current(file_name, section_name, subsection_name)?;
         let default = Self::get_default(file_name, section_name, subsection_name)?;
+        let new = json!({}).as_object().unwrap().to_owned();
 
         Ok(Self {
             current,
             default,
+            new: Rc::new(RefCell::new(new)),
             paths,
         })
     }
