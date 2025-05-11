@@ -12,10 +12,14 @@ use libadwaita::{
     PreferencesPage, SpinRow, SwitchRow, ToolbarView,
     gio::{ActionEntry, SimpleActionGroup, prelude::ActionMapExtManual},
     glib::{VariantTy, object::Cast, variant::ToVariant},
-    gtk::{self, Adjustment, Orientation, StringList, Widget, prelude::WidgetExt},
+    gtk::{
+        self, Adjustment, Orientation, StringList, Widget,
+        prelude::{EditableExt, WidgetExt},
+    },
     prelude::{ComboRowExt, PreferencesGroupExt},
 };
 use main_page::MainPage;
+use serde_json::json;
 use std::{collections::HashMap, rc::Rc};
 use surround_page::SurroundPage;
 
@@ -208,8 +212,10 @@ pub trait PrefPage: NavPage {
                     .build();
 
                 build.connect_active_notify(move |switch_row| {
-                    let json_variant =
-                        format!("{{\"{}\": {}}}", &key, &switch_row.is_active()).to_variant();
+                    let json_variant = json!({ &key: &switch_row.is_active() })
+                        .to_string()
+                        .to_variant();
+
                     switch_row
                         .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
                         .unwrap();
@@ -237,8 +243,8 @@ pub trait PrefPage: NavPage {
                     .build();
 
                 build.connect_value_notify(move |spin_row| {
-                    let json_variant =
-                        format!("{{\"{}\": {}}}", &key, &spin_row.value()).to_variant();
+                    let json_variant = json!({ &key: &spin_row.value() }).to_string().to_variant();
+
                     spin_row
                         .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
                         .unwrap();
@@ -258,9 +264,11 @@ pub trait PrefPage: NavPage {
                     let build = ComboRow::builder().title(title).model(&list).build();
 
                     build.connect_selected_item_notify(move |combo_row| {
-                        let selected_string = list.string(combo_row.selected()).unwrap();
+                        let selected_string =
+                            list.string(combo_row.selected()).unwrap().to_string();
                         let json_variant =
-                            format!("{{\"{}\": {:?}}}", &key, &selected_string).to_variant();
+                            json!({ &key: &selected_string }).to_string().to_variant();
+
                         combo_row
                             .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
                             .unwrap();
@@ -269,7 +277,17 @@ pub trait PrefPage: NavPage {
                     Some(build.upcast())
                 }
                 None => {
+                    let key = key.to_owned();
                     let build = EntryRow::builder().title(title).text(value).build();
+
+                    build.connect_text_notify(move |entry_row| {
+                        let input_string = entry_row.text().to_string();
+                        let json_variant = json!({ &key: &input_string }).to_string().to_variant();
+
+                        entry_row
+                            .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
+                            .unwrap();
+                    });
 
                     Some(build.upcast())
                 }
@@ -287,7 +305,8 @@ pub trait PrefPage: NavPage {
             .parameter_type(Some(VariantTy::STRING))
             .activate(move |_group, _action, parameter| {
                 let string_value = parameter.unwrap().try_get::<String>().unwrap();
-                println!("========= INPUT ACTION:  {}", string_value);
+                let json_value: serde_json::Value = serde_json::from_str(&string_value).unwrap();
+                println!("========= INPUT ACTION:  {:#?}", json_value);
             })
             .build();
 
