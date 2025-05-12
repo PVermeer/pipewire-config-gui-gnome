@@ -87,7 +87,7 @@ impl MainPage {
     }
 
     async fn get_document(pipewire: Rc<Pipewire>) {
-        let a = &pipewire.surround.current;
+        let a = &pipewire.surround.borrow().current;
         info!("{:?}", a);
         todo!()
     }

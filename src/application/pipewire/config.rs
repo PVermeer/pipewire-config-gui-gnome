@@ -22,13 +22,14 @@ pub type MapWithOptions = HashMap<String, (Value, Option<Vec<String>>)>;
 pub struct PwConfig {
     pub current: Map<String, Value>,
     pub default: MapWithOptions,
-    pub new: Rc<RefCell<Map<String, Value>>>,
+    pub new: Map<String, Value>,
+    pub enabled: bool,
     pub paths: Map<String, Value>,
 }
 impl PwConfig {
     const LOG_TARGET: &str = "PwConfig";
 
-    pub fn new(config_file: PwConfigFile) -> Result<Self> {
+    pub fn new(config_file: PwConfigFile) -> Result<Rc<RefCell<Self>>> {
         let (file_name, section_name, subsection_name) =
             Self::get_config_file_and_sections(&config_file);
 
@@ -37,12 +38,17 @@ impl PwConfig {
         let default = Self::get_default(file_name, section_name, subsection_name)?;
         let new = json!({}).as_object().unwrap().to_owned();
 
-        Ok(Self {
+        Ok(Rc::new(RefCell::new(Self {
             current,
             default,
-            new: Rc::new(RefCell::new(new)),
+            new,
+            enabled: false,
             paths,
-        })
+        })))
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled
     }
 
     fn get_paths(file: &str) -> Result<Map<String, Value>> {

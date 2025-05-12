@@ -1,9 +1,9 @@
 use super::config::{PwConfig, PwConfigFile, PwPulseSection, PwPulseSectionSub};
 use anyhow::Result;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 pub struct Pipewire {
-    pub surround: PwConfig,
+    pub surround: Rc<RefCell<PwConfig>>,
 }
 impl Pipewire {
     pub fn new() -> Result<Rc<Self>> {

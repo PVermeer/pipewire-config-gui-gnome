@@ -21,7 +21,7 @@ use libadwaita::{
 use log::debug;
 use main_page::MainPage;
 use serde_json::json;
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use surround_page::SurroundPage;
 
 #[repr(i32)]
@@ -101,6 +101,8 @@ pub trait PrefPage: NavPage {
     const ACTION_LABEL: &str;
     const INPUT_ACTION_LABEL: &str;
     const INPUT_PAGE_ACTION_LABEL: &str;
+    const PAGE_ENABLE_ACTION_LABEL: &str;
+    const PAGE_ENABLE_PAGE_ACTION_LABEL: &str;
 
     fn build_pref_page(
         title: &str,
@@ -133,11 +135,15 @@ pub trait PrefPage: NavPage {
     }
 
     fn build_page_switch(&self) -> PreferencesGroup {
-        let key = format!("enable-{}", self.get_title().to_lowercase());
-
+        let key = Self::PAGE_ENABLE_ACTION_LABEL;
         let preferences_group = PreferencesGroup::builder().build();
         let enable_switch = self
-            .build_input_row_for_pref_group(&key, &serde_json::Value::Bool(false), &None)
+            .build_input_row_for_pref_group(
+                key,
+                &serde_json::Value::Bool(false),
+                &None,
+                Some(Self::PAGE_ENABLE_PAGE_ACTION_LABEL.to_string()),
+            )
             .unwrap();
         preferences_group.add(&enable_switch);
 
@@ -180,7 +186,9 @@ pub trait PrefPage: NavPage {
             let preferences_group = PreferencesGroup::builder().title(section).build();
 
             for (key, (value, options)) in values {
-                if let Some(input_row) = self.build_input_row_for_pref_group(key, value, options) {
+                if let Some(input_row) =
+                    self.build_input_row_for_pref_group(key, value, options, None)
+                {
                     preferences_group.add(&input_row);
                 }
             }
@@ -197,11 +205,16 @@ pub trait PrefPage: NavPage {
         key: &str,
         value: &serde_json::Value,
         options: &Option<Vec<String>>,
+        action_label: Option<String>,
     ) -> Option<Widget> {
         let title = key
             .to_lowercase()
             .from_case(Case::Kebab)
             .to_case(Case::Sentence);
+        let action_label = match action_label {
+            Some(label) => label,
+            None => Self::INPUT_PAGE_ACTION_LABEL.to_string(),
+        };
 
         match value {
             serde_json::Value::Bool(value) => {
@@ -217,7 +230,7 @@ pub trait PrefPage: NavPage {
                         .to_variant();
 
                     switch_row
-                        .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
+                        .activate_action(&action_label, Some(&json_variant))
                         .unwrap();
                 });
 
@@ -246,7 +259,7 @@ pub trait PrefPage: NavPage {
                     let json_variant = json!({ &key: &spin_row.value() }).to_string().to_variant();
 
                     spin_row
-                        .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
+                        .activate_action(&action_label, Some(&json_variant))
                         .unwrap();
                 });
 
@@ -270,7 +283,7 @@ pub trait PrefPage: NavPage {
                             json!({ &key: &selected_string }).to_string().to_variant();
 
                         combo_row
-                            .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
+                            .activate_action(&action_label, Some(&json_variant))
                             .unwrap();
                     });
 
@@ -285,7 +298,7 @@ pub trait PrefPage: NavPage {
                         let json_variant = json!({ &key: &input_string }).to_string().to_variant();
 
                         entry_row
-                            .activate_action(Self::INPUT_PAGE_ACTION_LABEL, Some(&json_variant))
+                            .activate_action(&action_label, Some(&json_variant))
                             .unwrap();
                     });
 
@@ -300,11 +313,15 @@ pub trait PrefPage: NavPage {
         }
     }
 
-    fn build_input_action(&self, pw_config: &PwConfig) -> ActionEntry<SimpleActionGroup> {
-        let pw_config_new = pw_config.new.clone();
+    fn build_input_action(
+        &self,
+        pw_config: &Rc<RefCell<PwConfig>>,
+    ) -> ActionEntry<SimpleActionGroup> {
+        let pw_config = pw_config.clone();
         let action = ActionEntry::builder(Self::INPUT_ACTION_LABEL)
             .parameter_type(Some(VariantTy::STRING))
             .activate(move |_group, _action, parameter| {
+                let mut pw_config = pw_config.borrow_mut();
                 let string_value = parameter.unwrap().try_get::<String>().unwrap();
                 let json_value: serde_json::Value = serde_json::from_str(&string_value).unwrap();
 
@@ -314,11 +331,40 @@ pub trait PrefPage: NavPage {
                 let key = json_object.keys().next().unwrap();
                 let value = json_object.values().next().unwrap();
 
-                pw_config_new
-                    .borrow_mut()
-                    .insert(key.to_owned(), value.clone());
+                pw_config.new.insert(key.to_owned(), value.clone());
 
-                debug!(target: Self::LOG_TARGET, "Input action new config:\n{:#?}", pw_config_new);
+                debug!(target: Self::LOG_TARGET, "Input action new config:\n{:#?}", pw_config.new);
+            })
+            .build();
+
+        action
+    }
+
+    fn build_page_switch_action(
+        &self,
+        pw_config: &Rc<RefCell<PwConfig>>,
+    ) -> ActionEntry<SimpleActionGroup> {
+        let pw_config = pw_config.clone();
+        let action = ActionEntry::builder(Self::PAGE_ENABLE_ACTION_LABEL)
+            .parameter_type(Some(VariantTy::STRING))
+            .activate(move |_group, _action, parameter| {
+                let mut pw_config = pw_config.borrow_mut();
+                let string_value = parameter.unwrap().try_get::<String>().unwrap();
+                let json_value: serde_json::Value = serde_json::from_str(&string_value).unwrap();
+                let is_enabled = json_value
+                    .as_object()
+                    .expect("Page enable switch parameter should be a json object")
+                    .get(Self::PAGE_ENABLE_ACTION_LABEL)
+                    .expect(&format!(
+                        "Page enable switch parameter should have key: {}",
+                        Self::PAGE_ENABLE_ACTION_LABEL
+                    ))
+                    .as_bool()
+                    .expect("Page enable switch parameter should have boolean value");
+
+                debug!(target: Self::LOG_TARGET, "Page enable action:\n{:?}", is_enabled);
+
+                pw_config.set_enabled(is_enabled);
             })
             .build();
 

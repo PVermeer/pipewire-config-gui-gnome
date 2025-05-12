@@ -55,18 +55,22 @@ impl PrefPage for SurroundPage {
     const ACTION_LABEL: &str = "surround";
     const INPUT_ACTION_LABEL: &str = "input";
     const INPUT_PAGE_ACTION_LABEL: &str = "surround.input";
+    const PAGE_ENABLE_ACTION_LABEL: &str = "page-enable";
+    const PAGE_ENABLE_PAGE_ACTION_LABEL: &str = "surround.page-enable";
 }
 impl SurroundPage {
     fn on_onit(&self, application: Rc<Application>) {
         let pipewire = application.pipewire.clone();
 
         let input_action = self.build_input_action(&pipewire.surround);
-        self.actions.add_action_entries([input_action]);
+        let page_enabled_action = self.build_page_switch_action(&pipewire.surround);
+        self.actions
+            .add_action_entries([input_action, page_enabled_action]);
 
         let enable_pref_group = self.build_page_switch();
         self.pref_page.add(&enable_pref_group);
 
-        let section_groups = self.build_sections_from_default(&pipewire.surround);
+        let section_groups = self.build_sections_from_default(&pipewire.surround.borrow());
         for group in section_groups {
             self.pref_page.add(&group);
         }
