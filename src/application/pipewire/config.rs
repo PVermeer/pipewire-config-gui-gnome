@@ -103,7 +103,24 @@ impl PwConfig {
 
         debug!(target: Self::LOG_TARGET, "{} {} current json:\n{:#?}", file, section, &json_object);
 
-        Ok(json_object)
+        json_object.sort_keys();
+        let map_to_one_json_object =
+            json_object
+                .iter()
+                .fold(
+                    serde_json::Map::new(),
+                    move |mut acc, (_key, value)| match value {
+                        Value::Object(map) => {
+                            acc.append(&mut map.to_owned());
+                            acc
+                        }
+                        _ => acc,
+                    },
+                );
+
+        debug!(target: Self::LOG_TARGET, "{} {} current json mapped to one:\n{:#?}", file, section, &map_to_one_json_object);
+
+        Ok(map_to_one_json_object)
     }
 
     fn get_default(file: &str, section: &str, subsection: Option<&str>) -> Result<MapWithOptions> {
