@@ -1,6 +1,5 @@
 mod pages;
 mod pipewire;
-mod shared;
 mod window;
 
 use pages::{NavPage, Page, Pages};

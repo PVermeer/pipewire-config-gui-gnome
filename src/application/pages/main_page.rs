@@ -1,9 +1,5 @@
-use super::NavPage;
-use crate::application::{
-    Application,
-    pipewire::pipewire::Pipewire,
-    shared::init::{Init, InitTrait},
-};
+use super::{NavPage, PageState};
+use crate::application::{Application, pipewire::pipewire::Pipewire};
 use libadwaita::{
     NavigationPage,
     glib::{self},
@@ -18,7 +14,7 @@ use std::rc::Rc;
 pub struct MainPage {
     pub nav_page: NavigationPage,
     button: Button,
-    init: Init,
+    state: PageState,
     title: String,
 }
 impl NavPage for MainPage {
@@ -46,7 +42,7 @@ impl NavPage for MainPage {
             .label("Open file")
             .build();
 
-        let (nav_page, _header, content_box, init) = Self::build_nav_page(&title);
+        let (nav_page, _header, content_box, state) = Self::build_nav_page(&title);
 
         content_box.append(&label);
         content_box.append(&button);
@@ -54,18 +50,22 @@ impl NavPage for MainPage {
         return Self {
             nav_page,
             button,
-            init,
+            state,
             title,
         };
     }
 
     fn init(&mut self, application: Rc<Application>) {
         self.on_init(application);
-        self.init.set_state(true);
+        self.state.set_init(true);
     }
 
     fn is_init(&self) -> bool {
-        self.init.get_state()
+        self.state.get_init()
+    }
+
+    fn get_state(&self) -> &PageState {
+        &self.state
     }
 
     fn get_title(&self) -> &str {

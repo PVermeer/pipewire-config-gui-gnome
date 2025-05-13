@@ -23,7 +23,6 @@ pub struct PwConfig {
     pub current: Map<String, Value>,
     pub default: MapWithOptions,
     pub new: Map<String, Value>,
-    pub enabled: bool,
     pub paths: Map<String, Value>,
 }
 impl PwConfig {
@@ -42,13 +41,8 @@ impl PwConfig {
             current,
             default,
             new,
-            enabled: false,
             paths,
         })))
-    }
-
-    pub fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled
     }
 
     fn get_paths(file: &str) -> Result<Map<String, Value>> {

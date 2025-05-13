@@ -1,8 +1,5 @@
 use super::{NavPage, Page};
-use crate::application::{
-    shared::init::{Init, InitTrait},
-    window::view::View,
-};
+use crate::application::{pages::PageState, window::view::View};
 use libadwaita::{
     ActionRow, HeaderBar, NavigationPage, ToolbarView,
     glib::Variant,
@@ -12,7 +9,7 @@ use libadwaita::{
 pub struct SidebarPage {
     pub nav_page: NavigationPage,
     pub header: HeaderBar,
-    init: Init,
+    state: PageState,
     title: String,
     list: ListBox,
 }
@@ -37,27 +34,31 @@ impl NavPage for SidebarPage {
             .child(&toolbar)
             .build();
 
-        let init = Init::new();
+        let state = PageState::new();
 
         return Self {
             nav_page,
             header,
             list,
-            init,
+            state,
             title,
         };
     }
 
     fn is_init(&self) -> bool {
-        self.init.get_state()
+        self.get_state().get_init()
     }
 
     fn get_title(&self) -> &str {
         &self.title
     }
 
+    fn get_state(&self) -> &PageState {
+        &self.state
+    }
+
     fn init(&mut self, _application: std::rc::Rc<crate::application::Application>) {
-        self.init.set_state(true);
+        self.state.set_init(true);
     }
 
     fn get_navpage(&self) -> &NavigationPage {
